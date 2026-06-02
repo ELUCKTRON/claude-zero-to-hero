@@ -1,0 +1,127 @@
+<!-- Drill 1 — Wardrobe attribute extraction
+Straight from your domain. In your app, users add clothing by typing free-text. You need a prompt that turns that messy text into clean structured data for your DB. Real example of what a user might type:
+
+"blue nike hoodie i got last winter, kinda faded now, size L, my favorite for gym"
+
+Your task: write a prompt that extracts structured attributes from input like this. Requirements you must design around:
+
+Output feeds a backend insert, so it must be strict, parseable JSON with a fixed schema you define (think: category, color, brand, size, condition, etc. — your call).
+The input is free-text the user typed — messy, may omit fields, may contain irrelevant chatter ("my favorite for gym").
+Missing fields must be handled explicitly — don't let the model invent a brand that isn't there.
+It should generalize to inputs you didn't anticipate, not just this one example. -->
+
+
+<role> you are a data extraction expert that analyzes the user's messy text and generate structured data base on that 
+</role>
+
+<instructures>
+    <categories>
+    head-wear|shoes|upper-wear|lower-wear
+    </categories>
+
+    <size>
+        s = 1,
+        m = 2,
+        l = 3,
+        xl = 4
+        xxl = 5
+    </size>
+    <input-type>string</input-type>
+    <response-structure>JSON : 
+    {
+    category: str|null,color: str|null,size: int|null,
+    }
+    </response-structure>
+
+    
+
+</instructures>
+
+
+
+<examples>
+    <example>
+        <data>blue nike hoodie i got last winter, kinda faded now, size L, my favorite for gym</data>
+        <response>{"category":upper-wear,"color":blue,"size":3}<response>
+    </example>
+
+      <example>
+        <data> medium pants i bought </data>
+        <response>{"category":lower-wear,"color":unknown,"size":3}<response>
+    </example>
+</examples>
+
+<task> analyze this [data] extract the useful data base on my instructures </task>
+<data>{{some_data}}</data>
+
+<response>Return JSON only, no prose.</response>
+
+
+
+<!-- 
+SCORE — Drill 1
+
+Clarity & constraints: 17/25
+Context: 12/15
+Structure & data fencing: 17/20
+Output-spec fit: 14/25
+Technique: 11/15
+Total: 71/100 — Grade 4/5 -->
+
+
+
+
+<role>
+you are a data extraction expert that analyzes the user's messy text
+and generates structured data based on it
+</role>
+
+<instructions>
+    <categories>
+    head-wear|shoes|upper-wear|lower-wear
+    </categories>
+
+    <size>
+    s = 1, m = 2, l = 3, xl = 4, xxl = 5
+    </size>
+
+    <!-- FIXED #2: the core "don't invent" rule was missing — now stated explicitly.
+         Also handles the irrelevant-chatter / unmodeled-attribute requirement. -->
+    <rules>
+    - If a field is not present in the input, set it to null.
+      Never infer, guess, or fabricate a value.
+    - Ignore any text that does not map to a schema field
+      (e.g. "my favorite for gym", brand names, anything unmodeled).
+    - Normalize sizes to the integer map above; absent size -> null.
+    </rules>
+
+    <!-- FIXED #2: schema now agrees with examples (null, never the string "unknown").
+         Narrow 3-field schema kept intentionally — brand/condition deliberately out of scope. -->
+    <response-schema>
+    { "category": "head-wear|shoes|upper-wear|lower-wear" | null,
+      "color":    string | null,
+      "size":     integer 1-5 | null }
+    </response-schema>
+</instructions>
+
+<examples>
+    <example>
+        <data>blue nike hoodie i got last winter, kinda faded now, size L, my favorite for gym</data>
+        <!-- FIXED #1: strings quoted = valid JSON. "nike"/"faded"/"gym" ignored as unmodeled. -->
+        <response>{"category":"upper-wear","color":"blue","size":3}</response>
+        <!-- FIXED #5: was <response> instead of </response> -->
+    </example>
+
+    <example>
+        <data>medium pants i bought</data>
+        <!-- FIXED #3: medium = m = 2 (was wrongly 3).  FIXED #2: missing color -> null (was "unknown"). -->
+        <response>{"category":"lower-wear","color":null,"size":2}</response>
+    </example>
+</examples>
+
+<task>Extract the schema fields from <data> according to the rules above.</task>
+<data>{{some_data}}</data>
+
+<!-- FIXED #5: renamed from <response> to <output_format> — the examples already use
+     <response> for the demonstrated output, so reusing it here was two meanings, one tag. -->
+<output_format>Return JSON only, no prose.</output_format>
